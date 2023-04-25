@@ -27,7 +27,7 @@ connection = engine.connect()
 
 # schedule jobs
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=insert_data_db, trigger="interval", minutes=60, args=[connection, engine])
+scheduler.add_job(func=insert_data_db, trigger="interval", minutes=5, args=[connection, engine])
 scheduler.start()
 
 
