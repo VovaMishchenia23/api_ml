@@ -7,10 +7,12 @@ import requests
 import re
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+import nltk
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+nltk.download('stopwords')
 
 URL_BASE = os.getenv("ISW_URL")
 YEAR = "2023"
