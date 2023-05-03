@@ -13,6 +13,7 @@ import sqlalchemy as db
 from dotenv import load_dotenv
 import os
 
+# loading environmental variables
 load_dotenv()
 
 app = Flask(__name__)
@@ -25,21 +26,24 @@ PORT = os.getenv("PORT")
 engine = db.create_engine(DATABASE_URL, isolation_level="SERIALIZABLE")
 connection = engine.connect()
 
-# schedule jobs
+# schedule jobs to insert new prediction to db every hour
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=insert_data_db, trigger="interval", minutes=60, args=[connection, engine])
 scheduler.start()
 
-
+# get prediction for specific region or for all regions if region="all"
 def get_prediction(region="all"):
     if region == "all":
         predictions = get_data(connection, engine)
     else:
         region_id = get_regions_id()
         predictions = get_data(connection, engine, region_id=int(region_id[region]))
-
+        
+    # load last prediction time, when data was inserted to db from file
     with open(f"{DATA_FOLDER}{LAST_TIME_PREDICTION_FILE}", "rb") as file:
         last_prediction_time = pickle.load(file)
+        
+    # creating response
     response = {"last_prediciotn_time": last_prediction_time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "last_model_train_time": datetime.fromtimestamp(pathlib.Path(model_path).stat().st_mtime).strftime(
                     "%Y-%m-%dT%H:%M:%SZ"),
@@ -83,7 +87,7 @@ def handle_invalid_usage(error):
 def home_page():
     return "<p>Weather API</p>"
 
-
+# endpoint for getting prediction for all region or for specific region if region value from request body is not None
 @app.route(
     "/prediction"
 )
