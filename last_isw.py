@@ -11,12 +11,17 @@ import nltk
 import os
 from dotenv import load_dotenv
 
+# loading environmental variables
 load_dotenv()
+
+# loading stopwords list 
 nltk.download('stopwords')
 
 URL_BASE = os.getenv("ISW_URL")
 YEAR = "2023"
 DATA_FOLDER = "data/"
+
+# file with vectorizer to vectorize new isw report based on the 330 old reports
 VECTORIZER_FILE = "vectorizer.pkl"
 
 
@@ -27,7 +32,7 @@ def get_last_isw():
     stemm_text = stemming(clean_text)
     return stemm_text
 
-
+# get last isw report raw html page 
 def get_html():
     report_date = date.today() - timedelta(1)
     url = create_url(report_date)
@@ -38,7 +43,7 @@ def get_html():
         req = requests.get(new_url)
     return req.text
 
-
+# create url for getting latest isw report
 def create_url(date_):
     return f"{URL_BASE}russian-offensive-campaign-assessment-{calendar.month_name[date_.month].lower()}-{date_.day}-{YEAR}"
 
@@ -61,7 +66,7 @@ def suitable_string(string):
     return len(string.strip()) != 0 and "Click" not in string \
            and "Note" not in string and "." in string and "W." not in string
 
-
+# get date in format of isw report to delete it from the text
 def get_date(date):
     date = date.split("-")
     return " " + calendar.month_name[int(date[1])].capitalize() + " " + str(int(date[2]))
@@ -99,7 +104,7 @@ def clear_text(data):
 
     return text
 
-
+# stemming the text by PorterStemmer
 def stemming(data):
     stemmer = PorterStemmer()
     new_data = ""
@@ -107,7 +112,7 @@ def stemming(data):
         new_data += stemmer.stem(word) + " "
     return new_data
 
-
+# convert text to tf-idf matrix based on the 330 old isw reports
 def get_last_isw_matrix():
     with open(f"{DATA_FOLDER}{VECTORIZER_FILE}", "rb") as file:
         vectorizer = pickle.load(file)
