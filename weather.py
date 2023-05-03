@@ -4,6 +4,7 @@ import datetime
 from dotenv import load_dotenv
 import os
 
+# loading environmental variables
 load_dotenv()
 
 API_KEY = os.getenv("WEATHER_API_KEY")
@@ -15,22 +16,32 @@ SUMY_ID = "33275099999"
 WEATHER_URL = os.getenv("WEATHER_URL")
 PREDICTION_DURATION = 12
 TIME_FORMAT = 24
+
+# cities whose weather data is received via the city ID
 problem_city_id = {"Lviv": LVIV_ID, "Sumy": SUMY_ID}
+
+# data to be written to the dataset daily
 DAY_COLUMNN_NAMES = ['day_tempmax', 'day_tempmin', 'day_temp', 'day_dew', 'day_humidity',
                      'day_precip',
                      'day_precipcover', 'day_solarradiation', 'day_solarenergy', 'day_uvindex', 'day_moonphase']
+
+# data to be written to the dataset hourly
 HOUR_COLUMN_NAMES = ['hour_temp', 'hour_humidity', 'hour_dew', 'hour_precip', 'hour_precipprob', 'hour_snowdepth',
                      'hour_windgust', 'hour_windspeed', 'hour_winddir', 'hour_pressure', 'hour_visibility',
                      'hour_cloudcover', 'hour_solarradiation', 'hour_uvindex', 'hour_severerisk', 'hour_conditions']
+
+# additional columns names for processing and merging data
 ADDITIONAL_COLUMN_NAMES = ['location', 'time', 'date']
 ADDITIONAL_COLUMN_NAMES_2 = ['region_id', 'is_weekend']
-
 
 def get_all_regions_list():
     region_df = pd.read_csv(f"{DATA__FOLDER}regions.csv")
     locations = list(region_df["center_city_en"].values)
+    
+    # removing Simferopol and Luhansk from the list as their data is not used in the alerts prediction 
     locations.remove("Simferopol")
     locations.remove("Luhansk")
+    
     return locations
 
 
@@ -40,16 +51,21 @@ def get_start_hour_prediction():
 
 def get_weather(region="all"):
     region_df = pd.read_csv(f"{DATA__FOLDER}regions.csv")
+    
+    # weather for all regions or only for a specific region
     if region == "all":
         locations = get_all_regions_list()
     else:
         locations = [region]
 
+    # creating weather dataframe to write down the weather conditions for the next hours
     weather_df = pd.DataFrame(
         columns=ADDITIONAL_COLUMN_NAMES + DAY_COLUMNN_NAMES + HOUR_COLUMN_NAMES + ADDITIONAL_COLUMN_NAMES_2)
+    
     start_hour_prediction = get_start_hour_prediction()
     end_hour_prediction = start_hour_prediction + PREDICTION_DURATION
 
+    # getting weather data from api and writing it to dataframe
     for location in locations:
         if location in problem_city_id:
             url = f'{WEATHER_URL}{problem_city_id[location]}'
@@ -78,10 +94,16 @@ def get_weather(region="all"):
             new_row.append(region_df.loc[region_df['center_city_en'] == location]['region_id'].iloc[0])
             new_row.append(datetime.datetime.strptime(day_info['datetime'], "%Y-%m-%d").isoweekday() in [6, 7])
             weather_df.loc[len(weather_df.index)] = new_row
-
+    
+    # converting to a categorical data type
     weather_df["hour_conditions"] = weather_df["hour_conditions"].astype('category').cat.codes
+    
+    # converting to an int data type
     weather_df["is_weekend"] = weather_df["is_weekend"].astype(int)
+    
+    # filling empty cells with method ffill 
     weather_df.fillna(method="ffill")
+    
     return weather_df
 
 
